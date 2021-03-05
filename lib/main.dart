@@ -52,6 +52,10 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
+  void _saveImage() {
+    //TODO Upload to Google Cloud
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
