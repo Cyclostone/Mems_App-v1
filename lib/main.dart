@@ -4,6 +4,7 @@ import 'dart:typed_data';
 // ignore: unused_import
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'api.dart';
 
 void main() {
   runApp(MyApp());
@@ -34,9 +35,20 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   File _image;
-  // ignore: unused_field
   Uint8List _imageBytes;
+  String _imageName;
   final picker = ImagePicker();
+  CloudApi api;
+  bool isUploaded = false;
+  bool loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    rootBundle.loadString('assets/credentials.json').then((json) {
+      api = CloudApi(json);
+    });
+  }
 
   void _getImage() async {
     final pickedFile = await picker.getImage(source: ImageSource.camera);
@@ -46,14 +58,25 @@ class _MyHomePageState extends State<MyHomePage> {
         print('path:' + pickedFile.path);
         _image = File(pickedFile.path);
         _imageBytes = _image.readAsBytesSync();
+        _imageName = _image.path.split('/').last;
+        isUploaded = false;
       } else {
         print('No Image Selected');
       }
     });
   }
 
-  void _saveImage() {
+  void _saveImage() async {
+    setState(() {
+      loading = true;
+    });
     //TODO Upload to Google Cloud
+    final response = await api.save(_imageName, _imageBytes);
+    print(response.downloadLink);
+    setState(() {
+      loading = false;
+      isUploaded = true;
+    });
   }
 
   @override
@@ -68,16 +91,29 @@ class _MyHomePageState extends State<MyHomePage> {
             : Stack(
                 children: [
                   Image.memory(_imageBytes),
-                  Align(
-                    alignment: Alignment.bottomCenter,
-                    child: FlatButton(
-                      color: Colors.blueAccent,
-                      textColor: Colors.white,
-                      onPressed: () {},
-                      //onPressed: _saveImage,
-                      child: Text('Save to Cloud'),
+                  if (loading)
+                    Center(
+                      child: CircularProgressIndicator(),
                     ),
-                  )
+                  (isUploaded)
+                      ? Center(
+                          child: CircleAvatar(
+                            radius: 40,
+                            backgroundColor: Colors.green,
+                            child: Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 60,
+                            ),
+                          ),
+                        )
+                      : Align(
+                          alignment: Alignment.bottomCenter,
+                          child: TextButton(
+                            onPressed: _saveImage,
+                            child: Text('Save to Cloud'),
+                          ),
+                        )
                 ],
               ),
       ),
